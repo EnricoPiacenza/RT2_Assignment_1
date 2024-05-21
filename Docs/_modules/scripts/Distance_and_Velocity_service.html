@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>scripts.Distance_and_Velocity_service &mdash; RT2_Assignment_1 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=359c27e9"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            RT2_Assignment_1
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">RT2_Assignment_1</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">scripts.Distance_and_Velocity_service</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for scripts.Distance_and_Velocity_service</h1><div class="highlight"><pre>
+<span></span><span class="ch">#! /usr/bin/env python3</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: Distance_and_Velocity_service</span>
+<span class="sd">    :platform: Unix</span>
+<span class="sd">    :synopsis: Python module for the Distance_and_Velocity_service node.\n</span>
+<span class="sd">.. moduleauthor:: Enrico Piacenza 4878469@studenti.unige.it</span>
+
+<span class="sd">This node implements a service that returns the distance to the goal and the average linear velocity along x and the avarage angular velocity around z.</span>
+
+<span class="sd">Subscriber:\n</span>
+<span class="sd">/odom (nav_msgs/Odometry) - The position and velocity of the robot.</span>
+<span class="sd">&quot;&quot;&quot;</span> 
+
+<span class="kn">import</span> <span class="nn">queue</span>
+<span class="kn">import</span> <span class="nn">rospy</span>
+<span class="kn">from</span> <span class="nn">assignment_2_2023.msg</span> <span class="kn">import</span> <span class="n">PositionVelocity</span><span class="p">,</span> <span class="n">PlanningGoal</span>
+<span class="kn">from</span> <span class="nn">assignment_2_2023.srv</span> <span class="kn">import</span> <span class="n">info</span>
+<span class="kn">from</span> <span class="nn">nav_msgs.msg</span> <span class="kn">import</span> <span class="n">Odometry</span>
+
+<span class="c1"># Global FIFO queues for the linear velocity along x and the angular velocity around z</span>
+<span class="n">q_vx</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">q_vz</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+
+<div class="viewcode-block" id="goal_callback"><a class="viewcode-back" href="../../index.html#scripts.Distance_and_Velocity_service.goal_callback">[docs]</a><span class="k">def</span> <span class="nf">goal_callback</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    callback function for the topic /goal_topic, </span>
+<span class="sd">    it saves the goal position in global variables x_g and y_g.\n</span>
+
+<span class="sd">    input: msg (PlanningGoal)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">global</span> <span class="n">x_g</span><span class="p">,</span><span class="n">y_g</span>
+
+    <span class="n">x_g</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">target_pose</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">y_g</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">target_pose</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">y</span></div>
+
+<div class="viewcode-block" id="PosVel_Callback"><a class="viewcode-back" href="../../index.html#scripts.Distance_and_Velocity_service.PosVel_Callback">[docs]</a><span class="k">def</span> <span class="nf">PosVel_Callback</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    callback function for the topic /odom, </span>
+<span class="sd">    it saves the current position and velocity in global variable position_velocity</span>
+<span class="sd">    and it fills the queues q_vx and q_vz with the current linear velocity along x and the angular velocity around z.\n</span>
+
+<span class="sd">    input: data (Odometry)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">position_velocity</span>
+    <span class="k">global</span> <span class="n">q_vx</span>
+    <span class="k">global</span> <span class="n">q_vz</span>
+
+    <span class="c1"># Aquring Position and Velocity</span>
+    <span class="n">position_velocity</span> <span class="o">=</span> <span class="n">PositionVelocity</span><span class="p">()</span>
+    <span class="n">position_velocity</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">position_velocity</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">y</span>
+    <span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">twist</span><span class="o">.</span><span class="n">twist</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_z</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">twist</span><span class="o">.</span><span class="n">twist</span><span class="o">.</span><span class="n">angular</span><span class="o">.</span><span class="n">z</span>
+
+    <span class="c1"># Filling the queues</span>
+    <span class="k">if</span> <span class="n">q_vx</span><span class="o">.</span><span class="n">full</span><span class="p">():</span>
+        <span class="n">q_vx</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">q_vx</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">q_vx</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_x</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">q_vz</span><span class="o">.</span><span class="n">full</span><span class="p">():</span>
+        <span class="n">q_vz</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">q_vz</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_z</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">q_vz</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">position_velocity</span><span class="o">.</span><span class="n">vel_z</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="dist_Callback"><a class="viewcode-back" href="../../index.html#scripts.Distance_and_Velocity_service.dist_Callback">[docs]</a><span class="k">def</span> <span class="nf">dist_Callback</span><span class="p">(</span><span class="n">req</span><span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    callback function for the service Dist_target,</span>
+<span class="sd">    it computes the distance to the goal </span>
+<span class="sd">    and the average linear velocity along x and the avarage angular velocity around z.\n</span>
+
+<span class="sd">    input: req \n</span>
+<span class="sd">    output: x, y, v_x, v_z (float64)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">position_velocity</span>
+    <span class="k">global</span> <span class="n">q_vx</span>
+    <span class="k">global</span> <span class="n">q_vz</span>
+
+    <span class="c1"># Computing the distance to the goal</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x_g</span> <span class="o">-</span> <span class="n">position_velocity</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y_g</span> <span class="o">-</span> <span class="n">position_velocity</span><span class="o">.</span><span class="n">y</span>
+
+    <span class="c1"># Computing the avarage velocity</span>
+    <span class="n">v_x</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">q_vx</span><span class="o">.</span><span class="n">queue</span><span class="p">))</span> <span class="o">/</span> <span class="n">q_vx</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span>
+    <span class="n">v_z</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">q_vz</span><span class="o">.</span><span class="n">queue</span><span class="p">))</span> <span class="o">/</span> <span class="n">q_vz</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">v_x</span><span class="p">,</span> <span class="n">v_z</span></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../index.html#scripts.Distance_and_Velocity_service.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    main function of the node,</span>
+<span class="sd">    it initializes the node, subscribes to the topics /odom and /goal_topic</span>
+<span class="sd">    and creates the service server Dist_target.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Initialize the nodes</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">init_node</span><span class="p">(</span><span class="s1">&#39;Distance_and_Velocity_service&#39;</span><span class="p">,</span> <span class="n">anonymous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Subscribe to the topic /odom</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">Subscriber</span><span class="p">(</span><span class="s1">&#39;/odom&#39;</span><span class="p">,</span> <span class="n">Odometry</span><span class="p">,</span> <span class="n">PosVel_Callback</span><span class="p">)</span>
+
+    <span class="c1"># Subscribe to the topic /goal_topic</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">Subscriber</span><span class="p">(</span><span class="s1">&#39;goal_topic&#39;</span><span class="p">,</span> <span class="n">PlanningGoal</span><span class="p">,</span> <span class="n">goal_callback</span><span class="p">)</span>
+
+    <span class="c1"># Create a service server Dist_target</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">Service</span><span class="p">(</span><span class="s1">&#39;Dist_target&#39;</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">dist_Callback</span><span class="p">)</span>    
+
+    <span class="n">rospy</span><span class="o">.</span><span class="n">spin</span><span class="p">()</span></div>
+    
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Enrico Piacenza.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
