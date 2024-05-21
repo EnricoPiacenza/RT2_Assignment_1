@@ -1,5 +1,17 @@
 #! /usr/bin/env python3
 
+"""
+.. module:: Cordinate_service
+    :platform: Unix
+    :synopsis: Python module for the Cordinate_service node.
+.. moduleauthor:: Enrico Piacenza 4878469@studenti.unige.it
+
+This node implements a service that returns the goal position.
+
+Subscriber:\n
+/goal_topic (assignment_2_2023/PlanningGoal) - The goal to reach.    
+"""
+
 import rospy
 from assignment_2_2023.srv import cord
 from assignment_2_2023.msg import PlanningGoal

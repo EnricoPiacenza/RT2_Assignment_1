@@ -1,5 +1,23 @@
 #! /usr/bin/env python3
 
+"""
+.. module:: Actionlib_client
+    :platform: Unix
+    :synopsis: Python module for the Actionlib client node.
+.. moduleauthor:: Enrico Piacenza 4878469@studenti.unige.it
+
+This node implements an Actionlib client that sends a goal to the action server
+and waits for the goal to be reached. It also asks the user if they want to cancel the goal.
+
+Subscriber: \n
+/odom (nav_msgs/Odometry) - The position and velocity of the robot.
+
+Publisher:\n
+/PosVel (assignment_2_2023/PositionVelocity) - The position and velocity of the robot.\n
+/goal_topic (assignment_2_2023/PlanningGoal) - The goal to reach.
+
+""" 
+
 import select
 import sys
 import rospy
@@ -22,7 +40,7 @@ def PosVel_Callback(data):
     Callback function for the subscriber to the topic /odom.
     It creates a custom message with the position and velocity of the robot according to
     the custom message PositionVelocity.msg and publishes it on the topic /PosVel using 
-    the publisher pub_PosVel.
+    the publisher pub_PosVel.\n
 
     inputs: data (Odometry)
     """
@@ -44,9 +62,9 @@ def input_with_timeout(timeout):
 
     """
     Function to get the user input with timeout.
-    It returns the user input if it is given within the timeout, otherwise it returns None.
+    It returns the user input if it is given within the timeout, otherwise it returns None.\n
 
-    inputs: timeout (float)
+    inputs: timeout (float)\n
     output: user_input (string)
     """
     user_input = None
@@ -62,7 +80,7 @@ def input_with_timeout(timeout):
 def ask_user_to_cancel(client, stop_event):
 
     """
-    Function to ask the user if they want to cancel the goal.
+    Function to ask the user if they want to cancel the goal.\n
     inputs: client (SimpleActionClient)
     """
     print('Do you want to cancel the goal? (yes/no): ')
@@ -76,7 +94,7 @@ def ask_user_to_cancel(client, stop_event):
 def goal_reached(client, stop_event):
 
     """
-    Function that waits for the goal to be reached.
+    Function that waits for the goal to be reached.\n
     inputs: client (SimpleActionClient), stop_event (threading.Event)
     """
 
@@ -100,7 +118,7 @@ def create_goal(x_goal, y_goal):
         
     """
     Function to create the goal to send to the action server, 
-    it publishes the goal created on the topic /goal_topic.
+    it publishes the goal created on the topic /goal_topic.\n
     inputs: x_goal (float), y_goal (float)
     """
     
@@ -118,7 +136,7 @@ def create_goal(x_goal, y_goal):
 def ask_target_position():
         
     """
-    Function to ask the user for the goal coordinates.
+    Function to ask the user for the goal coordinates.\n
     output: x_goal (float), y_goal (float)
     """
     

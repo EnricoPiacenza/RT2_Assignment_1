@@ -1,5 +1,17 @@
 #! /usr/bin/env python3
 
+"""
+.. module:: Distance_and_Velocity_service
+    :platform: Unix
+    :synopsis: Python module for the Distance_and_Velocity_service node.\n
+.. moduleauthor:: Enrico Piacenza 4878469@studenti.unige.it
+
+This node implements a service that returns the distance to the goal and the average linear velocity along x and the avarage angular velocity around z.
+
+Subscriber:\n
+/odom (nav_msgs/Odometry) - The position and velocity of the robot.
+""" 
+
 import queue
 import rospy
 from assignment_2_2023.msg import PositionVelocity, PlanningGoal
@@ -14,7 +26,7 @@ def goal_callback(msg):
 
     """
     callback function for the topic /goal_topic, 
-    it saves the goal position in global variables x_g and y_g.
+    it saves the goal position in global variables x_g and y_g.\n
 
     input: msg (PlanningGoal)
     """
@@ -29,7 +41,7 @@ def PosVel_Callback(data):
     """
     callback function for the topic /odom, 
     it saves the current position and velocity in global variable position_velocity
-    and it fills the queues q_vx and q_vz with the current linear velocity along x and the angular velocity around z.
+    and it fills the queues q_vx and q_vz with the current linear velocity along x and the angular velocity around z.\n
 
     input: data (Odometry)
     """
@@ -62,9 +74,9 @@ def dist_Callback(req):
     """
     callback function for the service Dist_target,
     it computes the distance to the goal 
-    and the average linear velocity along x and the avarage angular velocity around z.
+    and the average linear velocity along x and the avarage angular velocity around z.\n
 
-    input: req
+    input: req \n
     output: x, y, v_x, v_z (float64)
     """
     global position_velocity
