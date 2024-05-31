@@ -1,6 +1,8 @@
 ### You can find the documentation for the following repository at
 1. https://enricopiacenza.github.io/RT2_Assignment_1/
 
+### Or you can Check the pseudocode in this file
+
 ### Define libraries, modules and global variables needed for the correct functioning of the program
 
 1. Import libraries and modules.
