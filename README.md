@@ -1,4 +1,4 @@
-### You can find the page documentation for the following repository at
+### You can find the documentation for the following repository at
 1. https://enricopiacenza.github.io/RT2_Assignment_1/
 
 ### Define libraries, modules and global variables needed for the correct functioning of the program
